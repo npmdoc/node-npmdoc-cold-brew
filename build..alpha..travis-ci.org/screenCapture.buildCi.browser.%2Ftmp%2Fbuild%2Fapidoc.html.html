@@ -1,0 +1,308 @@
+<html><head></head><body><div class="apidocDiv">
+<style>
+/*csslint
+*/
+.apidocDiv {
+    background: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+}
+.apidocDiv a[href] {
+    color: #33f;
+    font-weight: bold;
+    text-decoration: none;
+}
+.apidocDiv a[href]:hover {
+    text-decoration: underline;
+}
+.apidocCodeCommentSpan {
+    background: #bbf;
+    color: #000;
+    display: block;
+}
+.apidocCodeKeywordSpan {
+    color: #d00;
+    font-weight: bold;
+}
+.apidocCodePre {
+    background: #eef;
+    border: 1px solid;
+    color: #777;
+    padding: 5px;
+    white-space: pre-wrap;
+}
+.apidocFooterDiv {
+    margin-top: 20px;
+    text-align: center;
+}
+.apidocModuleLi {
+    margin-top: 10px;
+}
+.apidocSectionDiv {
+    border-top: 1px solid;
+    margin-top: 20px;
+}
+.apidocSignatureSpan {
+    color: #777;
+    font-weight: bold;
+}
+</style>
+<h1>api documentation for
+    <a href="https://github.com/team-jwd/cold-brew">cold-brew (v1.0.36)</a>
+</h1>
+<h4>A testing module for TDD with apps that use the RTCPeerConnection API</h4>
+<div class="apidocSectionDiv"><a href="#apidoc.tableOfContents" id="apidoc.tableOfContents"><h1>table of contents</h1></a><ol>
+
+    <li class="apidocModuleLi"><a href="#apidoc.module.cold-brew">module cold-brew</a><ol>
+
+        <li>
+
+            <a class="apidocElementLiA" href="#apidoc.element.cold-brew.addColdBrewMethods">
+            function <span class="apidocSignatureSpan">cold-brew.</span>addColdBrewMethods
+            <span class="apidocSignatureSpan">(client)</span>
+            </a>
+
+        </li>
+
+        <li>
+
+            <a class="apidocElementLiA" href="#apidoc.element.cold-brew.createClient">
+            function <span class="apidocSignatureSpan">cold-brew.</span>createClient
+            <span class="apidocSignatureSpan">()</span>
+            </a>
+
+        </li>
+
+    </ol></li>
+
+</ol></div>
+
+<div class="apidocSectionDiv">
+<h1><a href="#apidoc.module.cold-brew" id="apidoc.module.cold-brew">module cold-brew</a></h1>
+
+
+    <h2>
+        <a href="#apidoc.element.cold-brew.addColdBrewMethods" id="apidoc.element.cold-brew.addColdBrewMethods">
+        function <span class="apidocSignatureSpan">cold-brew.</span>addColdBrewMethods
+        <span class="apidocSignatureSpan">(client)</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">function addColdBrewMethods(client) {
+<span class="apidocCodeCommentSpan">  /**
+   * untilRTCEvents - allows the webdriver to wait until certain
+   * RTCPeerCOnnection events to occur before proceeding
+   *
+   * @param  ...Strings events A list of the names of the events that
+   * the client should wait for before proceeding
+   *
+   * @return function        A function that returns a promise to execute a
+   * script in the browser that checks whether or not the provided RTC events
+   * exist in the window.RTCEvents object. This function will be executed
+   * repeatedly if it is used within a webdriver.wait() call,
+   * e.g. client.wait(client.untilRTCEvents('signalingstatechange', 'iceconnectionstatechange'))
+   */
+</span>  client.untilRTCEvents = function (events, options = {}) {
+    const { inOrder, label } = options;
+    if (inOrder &amp;&amp; typeof inOrder !== 'boolean') {
+      throw new TypeError(
+        `Invalid option passed into untilRTCEvents: inOrder: ${inOrder}`
+      );
+    }
+
+    if (label &amp;&amp; typeof label !== 'string') {
+      throw new TypeError(
+        `Invalid option passed into untilRTCEvents: label: ${label}`
+      );
+    }
+
+    // Needs to return a plain function instead of a promise so that
+    // it will be executed repeatedly within the client.wait() function
+    //
+    // The plain function should return true if the events we are waiting
+    // for exist on the window object, false otherwise.
+    return function () {
+      return client.executeScript(function (events, options) {
+        const { inOrder, label } = options;
+        // Check to make sure coldBrewData has been initialized
+        if (!(window.coldBrewData &amp;&amp; window.coldBrewData.RTCEvents)) {
+          return false;
+        }
+
+        const loggedEvents = label ?
+          window.coldBrewData.peerConnections[label] :
+          window.coldBrewData.RTCEvents;
+
+        loggedEventNames = loggedEvents.map(event =&gt; event.type);
+        // Handle the case where the user doesn't care if the events
+        // happened in a certain order
+
+
+        if (!inOrder) {
+          return events.every(eventName =&gt; loggedEventNames.includes(eventName));
+        } else {
+          return sameElementsInSameOrder(events, loggedEventNames);
+        }
+
+        function sameElementsInSameOrder(arr1, arr2) {
+          let remainingArr2 = arr2;
+          return arr1.reduce((truth, element) =&gt; {
+            if (!truth) return false;
+
+            const index = remainingArr2.indexOf(element);
+            if (index === -1) {
+              return false;
+            }
+
+            remainingArr2 = remainingArr2.slice(index);
+            return true;
+          }, true);
+        }
+      }, events, options);
+    };
+  };
+
+
+  /**
+   * waitUntilRTCEvents - convenience function to simplify the usage
+   * of client.untilRTCEvents
+   *
+   * @param   events description
+   * @return {type}           description
+   */
+  client.waitUntilRTCEvents = function (events, options, timeout) {
+    return client.wait(client.untilRTCEvents(events, options), timeout);
+  };
+
+
+  client.untilSendSignaling = function (events, options = {}) {
+    // Needs to return a plain function instead of a promise so that
+    // it will be executed repeatedly within the client.wait() function
+    //
+    // The plain function should return true if the events we are waiting
+    // for exist on the window object, false otherwise.
+
+    const { inOrder } = options;
+    if (inOrder &amp;&amp; typeof inOrder !== 'boolean') {
+      throw new TypeError(
+        `Invalid option passed into untilSendSignaling: inOrder: ${inOrder}`
+      );
+    }
+
+    return function () {
+      return client.executeScript(function (events, inOrder) {
+        // Check to make sure coldBrewData has been initialized
+        if (!(window.coldBrewData &amp;&amp; window.coldBrewData.socketEvents)) {
+          return false;
+        }
+
+        if (!inOrder) {
+          const outgoingSocketEvents = window.coldBrewData.socketEvents.outgoing
+            .map(event =&gt; event.type);
+          return events.every(eventName =&gt; outgoingSocketEvents.includes(eventName));
+        }
+
+        const socketEvents = window. ...</pre></li>
+    <li>example usage<pre class="apidocCodePre">...
+```javascript
+const coldBrew = require('cold-brew');
+```
+
+#### API
+The testing module exposes the following functions:
+* [coldBrew.createClient()](#cold-brew-create-client)
+* [coldBrew.<span class="apidocCodeKeywordSpan">addColdBrewMethods</span>(webdriver)](#cold-brew-add-cold-brew-methods)
+
+&lt;a name="cold-brew-create-client"&gt;&lt;/a&gt;
+**coldBrew.createClient()**
+
+Factory function that creates and returns a
+[Selenium WebDriver](http://seleniumhq.github.io/selenium/docs/api/javascript/module/selenium-webdriver/lib/webdriver_exports_WebDriver
+.html) object modified to include the
+[ColdBrew methods](#cold-brew-methods).
+...</pre></li>
+    </ul>
+
+
+
+    <h2>
+        <a href="#apidoc.element.cold-brew.createClient" id="apidoc.element.cold-brew.createClient">
+        function <span class="apidocSignatureSpan">cold-brew.</span>createClient
+        <span class="apidocSignatureSpan">()</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">function createClient() {
+  let client;
+  // const client = new selenium.Builder()
+  //   .usingServer()
+  //   .withCapabilities({
+  //     browserName: 'chrome',
+  //     chromeOptions: {
+  //       args: [
+  //         '--use-fake-ui-for-media-stream',
+  //       ],
+  //     },
+  //   })
+  //   .build();
+
+  if (process.env.SAUCE_USERNAME !== undefined) {
+    client = new selenium.Builder()
+      .usingServer('http://' + process.env.SAUCE_USERNAME + ':' + process.env.SAUCE_ACCESS_KEY + '@ondemand.saucelabs.com:80/wd/
+hub')
+      .withCapabilities({
+        'tunnel-identifier': process.env.TRAVIS_JOB_NUMBER,
+        build: process.env.TRAVIS_BUILD_NUMBER,
+        username: process.env.SAUCE_USERNAME,
+        accessKey: process.env.SAUCE_ACCESS_KEY,
+        browserName: 'chrome',
+        chromeOptions: {
+          args: [
+            '--use-fake-ui-for-media-stream',
+          ],
+        },
+      }).build();
+  } else {
+    client = new selenium.Builder()
+    .usingServer()
+    .withCapabilities({
+      browserName: 'chrome',
+      chromeOptions: {
+        args: [
+          '--use-fake-ui-for-media-stream',
+        ],
+      },
+    })
+    .build();
+  }
+
+  return addColdBrewMethods(client);
+}</pre></li>
+    <li>example usage<pre class="apidocCodePre">...
+```
+In this file, place the following code:
+```javascript
+const coldBrew = require('cold-brew');
+const selenium = require('selenium-webdriver');
+const { until, Key } = selenium;
+
+const client = coldBrew.<span class="apidocCodeKeywordSpan">createClient</span>();
+
+describe('ColdBrew client', function () {
+  it('should be able to navigate to google.com', function (done) {
+this.timeout(10000);
+
+client.get('https://www.google.com');
+client.wait(until.titleIs('Google'))
+...</pre></li>
+    </ul>
+
+
+</div>
+
+<div class="apidocFooterDiv">
+    [ this document was created with
+    <a href="https://github.com/kaizhu256/node-utility2" target="_blank">utility2</a>
+    ]
+</div>
+</div>
+</body></html>
